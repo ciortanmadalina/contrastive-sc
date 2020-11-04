@@ -1,3 +1,8 @@
+"""
+Original implementation of Contrastive-sc method
+(https://github.com/ciortanmadalina/contrastive-sc)
+By Madalina Ciortan (01/10/2020)
+"""
 import argparse
 import copy
 import os

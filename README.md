@@ -29,15 +29,18 @@ We have employed a docker containers to facilitate reproducing the paper results
 ### Python environment
 It can be launched by running the following:
 
-cd docker
+```
+cd docker  
 docker build -t contrastive-sc .
+```
 
 The image has been created for GPU usage. In order to run it on CPU, in the Dockerfile, the line "pytorch/pytorch:1.4-cuda10.1-cudnn7-runtime" should be replaced with a CPU version.
 
-The command above created a docker container tagged as contrastive-sc . Assuming the project has been cloned locally in a parent folder named notebooks, the image can be launched locally with:
+The command above created a docker container tagged as **contrastive-sc** . Assuming the project has been cloned locally in a parent folder named notebooks, the image can be launched locally with:
 
-docker run -it --runtime=nvidia -v ~/notebooks:/tf/notebooks -p 8888:8888 contrastive-sc
-
+```
+docker run -it --runtime=nvidia -v ~/notebooks:/workspace/notebooks -p 8888:8888 contrastive-sc
+```
 This starts up a jupyter notebook server, which can be accessed at http://localhost:8888/tree/notebooks
 
 ### R environment
@@ -45,8 +48,9 @@ This starts up a jupyter notebook server, which can be accessed at http://localh
 We followed the instructions on this [tutorial](http://bioinformatics.sph.harvard.edu/knowledgebase/scrnaseq/rstudio_sc_docker.html) in order to create an R docker container which comes with most single-cell related libraries already installed.
 In order to launch it on port 8787, execute the following:
 
-
+```
 docker run -d -p 8787:8787 -e USER='rstudio' -e PASSWORD='rstudioSC' -e ROOT=TRUE -v ~/notebooks/deep_clustering:/home/rstudio/projects vbarrerab/rstudio_singlecell
+```
 
 
 

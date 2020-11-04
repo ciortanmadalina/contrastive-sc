@@ -1,3 +1,8 @@
+"""
+Original implementation of Contrastive-sc method
+(https://github.com/ciortanmadalina/contrastive-sc)
+By Madalina Ciortan (01/10/2020)
+"""
 import copy
 import math
 from collections import Counter
@@ -16,7 +21,27 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 
-def normalize(adata, copy=True, highly_genes = None, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True):
+def normalize(adata, copy=True, highly_genes = None, filter_min_counts=True, 
+              size_factors=True, normalize_input=True, logtrans_input=True):
+    """
+    Normalizes input data and retains only most variable genes 
+    (indicated by highly_genes parameter)
+
+    Args:
+        adata ([type]): [description]
+        copy (bool, optional): [description]. Defaults to True.
+        highly_genes ([type], optional): [description]. Defaults to None.
+        filter_min_counts (bool, optional): [description]. Defaults to True.
+        size_factors (bool, optional): [description]. Defaults to True.
+        normalize_input (bool, optional): [description]. Defaults to True.
+        logtrans_input (bool, optional): [description]. Defaults to True.
+
+    Raises:
+        NotImplementedError: [description]
+
+    Returns:
+        [type]: [description]
+    """
     if isinstance(adata, sc.AnnData):
         if copy:
             adata = adata.copy()
@@ -54,6 +79,15 @@ def normalize(adata, copy=True, highly_genes = None, filter_min_counts=True, siz
 
 
 def cluster_acc(y_true, y_pred):
+    """
+    Computes clustering accuracy.
+    Args:
+        y_true ([type]): [description]
+        y_pred ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     y_true = y_true.astype(np.int64)
     assert y_pred.size == y_true.size
     D = max(y_pred.max(), y_true.max()) + 1
@@ -66,6 +100,17 @@ def cluster_acc(y_true, y_pred):
 
 
 def run_leiden(data, n_neighbors=10, n_pcs=40):
+    """
+    Performs Leiden community detection on given data.
+
+    Args:
+        data ([type]): [description]
+        n_neighbors (int, optional): [description]. Defaults to 10.
+        n_pcs (int, optional): [description]. Defaults to 40.
+
+    Returns:
+        [type]: [description]
+    """
     import scanpy.api as sc
     adata = sc.AnnData(data)
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, use_rep='X')
@@ -75,6 +120,21 @@ def run_leiden(data, n_neighbors=10, n_pcs=40):
     return pred
 
 def augment(inp, zeros, nb_zeros = 3, perc = 0.1, random = False, augm_value = 0):
+    """
+    Handles the cell-level data augmentation which is primarily based on 
+    input dropout.
+
+    Args:
+        inp ([type]): [description]
+        zeros ([type]): [description]
+        nb_zeros (int, optional): [description]. Defaults to 3.
+        perc (float, optional): [description]. Defaults to 0.1.
+        random (bool, optional): [description]. Defaults to False.
+        augm_value (int, optional): [description]. Defaults to 0.
+
+    Returns:
+        [type]: [description]
+    """
     aug = inp.copy()
     #np.mean(inp)
     random_vec = None
@@ -98,12 +158,21 @@ def augment(inp, zeros, nb_zeros = 3, perc = 0.1, random = False, augm_value = 0
 
 
 def evaluate(data, Yt, cluster_number):
+    """
+    Performs K-means on input data with cluster_number clusters and evaluates 
+    the result by computing the ARI, NMI and clustering accuracy 
+    against the provided ground truth.
+
+    Args:
+        data ([type]): [description]
+        Yt ([type]): [description]
+        cluster_number ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     kmeans = KMeans(n_clusters=cluster_number, init="k-means++", random_state=0)
     kmeans_pred = kmeans.fit_predict(data)
-#     cm = get_coassociation_matrix(kmeans_pred)
-
-#     if epoch > 8:
-#         cm = momentum * prev_cm + (1 - momentum) * cm
 
     kmeans_accuracy = np.around(cluster_acc(Yt, kmeans_pred), 5)
     kmeans_ARI = np.around(adjusted_rand_score(Yt, kmeans_pred), 5)
@@ -113,6 +182,20 @@ def evaluate(data, Yt, cluster_number):
 
 
 def adjust_learning_rate(p, optimizer, epoch):
+    """
+    Adapts optimizer's learning rate during the training. 
+
+    Args:
+        p ([type]): [description]
+        optimizer ([type]): [description]
+        epoch ([type]): [description]
+
+    Raises:
+        ValueError: [description]
+
+    Returns:
+        [type]: [description]
+    """
     lr = p['optimizer_kwargs']['lr']
     
     if p['scheduler'] == 'cosine':
