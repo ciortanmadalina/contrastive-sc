@@ -217,3 +217,53 @@ def adjust_learning_rate(p, optimizer, epoch):
         param_group['lr'] = lr
 
     return lr
+
+def rename_column(x, scenario = "ours"):
+    ours_basic = [
+        'method1_0',
+        'method1_1',
+        'method1_2',
+    ]
+    ours_clust = ['method2_0', 'method2_1', 'method2_2']
+    if x in ours_basic:
+        return "Baseline k-means"
+    if x in ours_clust:
+        return "Cluster NN"
+    if x == 'method3':
+        return "Ensemble K-means"
+    if x == 'Leiden':
+        if scenario == "ours":
+            return "Ensemble Leiden (contrastive-sc)"
+        else:
+            return "contrastive-sc"
+    if x == "pca":
+        return "PCA + KMeans"
+    if x == "original":
+        return "KMeans"
+    return x
+
+def order_column(x):
+    if x == "PCA + KMeans":
+        return 0
+    if x == "KMeans":
+        return 1
+    if x == 'Seurat':
+        return 3
+    if x == 'scanpy':
+        return 4
+    if x == 'sczi':
+        return 5
+    if x == "scDeepCluster":
+        return 6
+    if x == "Baseline k-means":
+        return 7
+    if x == "Cluster NN":
+        return 8
+    if x == "Ensemble K-means":
+        return 9
+    if x == "contrastive-sc":
+        return 10
+    if x == "Ensemble Leiden (contrastive-sc)":
+        return 10
+
+    return x
