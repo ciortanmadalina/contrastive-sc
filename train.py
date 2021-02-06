@@ -143,6 +143,18 @@ def evaluate(embeddings, cluster_number, Y):
     return result
 
 
+def get_device():
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+    return device
+
 def train_model(X,
                 cluster_number,
                 Y=None,
@@ -152,9 +164,10 @@ def train_model(X,
                 dropout=0.8,
                 evaluate = False,
                 layers = [256, 64, 32]):
+    device = get_device()
     dims = np.concatenate([[X.shape[1]], layers])#[X.shape[1], 256, 64, 32]
     model = models.ContrastiveRepresentation(dims, dropout=dropout)
-
+    model.to(device)
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,
                                         model.parameters()),
                                  lr=lr)
@@ -183,9 +196,9 @@ def train_model(X,
                 continue
             c_idx = idx[c_idx]
             c_inp = X[c_idx]
-            targets = torch.FloatTensor(Y[c_idx]).cuda()
-            input1 = torch.FloatTensor(c_inp)  #.cuda()
-            input2 = torch.FloatTensor(c_inp)  #.cuda()
+
+            input1 = torch.FloatTensor(c_inp).to(device)
+            input2 = torch.FloatTensor(c_inp).to(device)
 
             anchors_output = model(input1)
             neighbors_output = model(input2)
@@ -213,7 +226,7 @@ def train_model(X,
         losses.append(loss_)
     model.eval()
     with torch.no_grad():
-        result = model(torch.FloatTensor(X))
+        result = model(torch.FloatTensor(X).to(device))
         features = result.detach().cpu().numpy()
     return features
 
