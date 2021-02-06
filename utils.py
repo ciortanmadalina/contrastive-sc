@@ -58,7 +58,7 @@ def normalize(adata, copy=True, highly_genes = None, filter_min_counts=True,
             assert np.all(adata.X.astype(int) == adata.X), norm_error
 
     if filter_min_counts:
-        sc.pp.filter_genes(adata, min_counts=1)
+        sc.pp.filter_genes(adata, min_counts=3)
         sc.pp.filter_cells(adata, min_counts=1)
     if size_factors or normalize_input or logtrans_input:
         adata.raw = adata.copy()

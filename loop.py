@@ -21,7 +21,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
-import model as modelfile
+import models as modelfile
 import st_loss
 import utils
 
