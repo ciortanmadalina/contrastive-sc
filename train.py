@@ -89,7 +89,7 @@ def adjust_learning_rate( optimizer, epoch):
         param_group['lr'] = lr
 
     return lr
-def evaluate(embeddings, cluster_number, Y):
+def evaluate(embeddings, cluster_number, Y, save_pred = False):
     """
     Computes the ARI scores of all experiments ran as part of train method.
 
@@ -113,13 +113,15 @@ def evaluate(embeddings, cluster_number, Y):
         pred = kmeans.fit_predict(embeddings[i])
         result[f"kmeans_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"kmeans_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
-        result[f"kmeans_pred_{i}"] = pred
+        if save_pred:
+            result[f"kmeans_pred_{i}"] = pred
 
         # evaluate leiden
         pred = utils.run_leiden(embeddings[i])
         result[f"leiden_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"leiden_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
-        result[f"leiden_pred_{i}"] = pred
+        if save_pred:
+            result[f"leiden_pred_{i}"] = pred
 
     if len(embeddings)>1:
         # combined results
@@ -131,13 +133,15 @@ def evaluate(embeddings, cluster_number, Y):
         pred = kmeans.fit_predict(combined_embeddings)
         result[f"COMBINED_kmeans_ari"] = adjusted_rand_score(Y, pred)
         result[f"COMBINED_kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
-        result[f"COMBINED_kmeans_pred"] = pred
+        if save_pred:
+            result[f"COMBINED_kmeans_pred"] = pred
 
         # evaluate leiden
         pred = utils.run_leiden(combined_embeddings)
         result[f"COMBINED_leiden_ari"] = adjusted_rand_score(Y, pred)
         result[f"COMBINED_leiden_nmi"] = normalized_mutual_info_score(Y, pred)
-        result[f"COMBINED_leiden_pred"] = pred
+        if save_pred:
+            result[f"COMBINED_leiden_pred"] = pred
 
 
     return result
@@ -163,7 +167,8 @@ def train_model(X,
                 temperature=0.07,
                 dropout=0.8,
                 evaluate = False,
-                layers = [256, 64, 32]):
+                layers = [256, 64, 32],
+                save_pred = False):
     device = get_device()
     dims = np.concatenate([[X.shape[1]], layers])#[X.shape[1], 256, 64, 32]
     model = models.ContrastiveRepresentation(dims, dropout=dropout)
@@ -218,7 +223,7 @@ def train_model(X,
             with torch.no_grad():
                 result = model(torch.FloatTensor(X))
                 features = result.detach().cpu().numpy()
-            res = train.evaluate([features], cluster_number, Y)
+            res = train.evaluate([features], cluster_number, Y, save_pred = save_pred)
             print(
                 f"{epoch}). Loss {loss_}, ARI {res['kmeans_ari_0']}, {res['leiden_ari_0']}"
             )
@@ -243,7 +248,8 @@ def run(X,
         evaluate=True,
         n_ensemble=1,
         layers = [256, 64, 32],
-        save_to="data/"):
+        save_to="data/",
+        save_pred = False):
     results = {}
     embeddings = []
     for i in range(n_ensemble):
@@ -255,15 +261,17 @@ def run(X,
                   temperature=temperature,
                   dropout=dropout,
                   layers = layers,
-                  evaluate=False)
-        results[f"features_{i}"] = f
+                  evaluate=evaluate,
+                  save_pred= save_pred)
+        if save_pred:
+            results[f"features_{i}"] = f
         embeddings.append(f)
     if Y is not None:
         res_eval = train.evaluate(embeddings, cluster_number, Y)
     results = {**results, **res_eval}
     results["dataset"] = dataset
-    if os.path.isdir(save_to) == False:
-        os.makedirs(save_to)
-    with open(f"{save_to}/{dataset}.pickle", 'wb') as handle:
-        pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#     if os.path.isdir(save_to) == False:
+#         os.makedirs(save_to)
+#     with open(f"{save_to}/{dataset}.pickle", 'wb') as handle:
+#         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return results
