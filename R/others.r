@@ -10,11 +10,10 @@
 require(rhdf5)
 require(igraph)
 require(SIMLR)
-require(cidr)
 require(SOUP)
 require(RaceID)
 library(SOUP)
-
+library(cidr)
 read_clean <- function(data) {  
   if (length(dim(data)) == 1) {
     data <- as.vector(data)
@@ -164,11 +163,69 @@ cell_label =output[[2]]
 print(nrow(datacount)) # 23000
 print(ncol(datacount)) # 3660
 
-print(data_list[9])
+print(data_list[14])
 # "mouse_bladder_cell_select_2100.h5"
-for(i in 9:length(data_list)){
+for(i in 6:length(data_list)){
   cur_data = data_list[i]
   file = paste0("../real_data/", cur_data)
+  print(i)
+  print(cur_data)
+  print(file)
+  output = get_input_data(file)
+  datacount = output[[1]]
+  cell_label =output[[2]]
+  print(nrow(datacount)) # 23000
+  print(ncol(datacount)) # 3660
+  for(run in 1:2){
+    print("begin CIDR cluster")
+    if (file.exists(paste0("results/",category, "/", cur_data, "_cidr_", run,".csv")) == FALSE){
+      cidr_list = CIDR_cluster(datacount, cell_label)
+      print(cidr_list)
+      print("finish CIDR cluster")
+      write.csv(cidr_list, paste0("results/",category, "/", cur_data, "_cidr_", run,".csv"))
+    }
+    
+    print("begin SOUP cluster")
+    if (file.exists(paste0("results/",category, "/", cur_data, "_soup_", run,".csv")) == FALSE){
+      soup_list = SOUP_cluster(datacount, cell_label)
+      print(soup_list)
+      print("finish SOUP cluster")
+      write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
+    }
+    
+    
+    print("begin SIMLR cluster")
+    if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
+      simlr_list = SIMLR_cluster_large(datacount, cell_label)
+      print(simlr_list)
+      print("finish SIMLR cluster")
+      write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
+    }
+
+  }
+  
+}
+
+
+print("begin RaceID cluster")
+if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
+  race_list = RaceID_cluster(datacount, cell_label)
+  print(race_list)
+  print("finish RaceID cluster")
+  write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
+}
+
+category = "balanced_data"
+data_list = list.files(paste0("simulated_data/", category),full.names = FALSE, recursive = FALSE)
+print(data_list)
+
+# debug
+i=1
+cur_data = data_list[i]
+file = paste0("simulated_data/", category,"/", cur_data)
+for(i in 1:length(data_list)){
+  cur_data = data_list[i]
+  file = paste0("simulated_data/", category,"/", cur_data)
   print(cur_data)
   print(file)
   output = get_input_data(file)
@@ -208,8 +265,8 @@ for(i in 9:length(data_list)){
       print("finish RaceID cluster")
       write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
     }
+    
   }
-  
 }
 
 # DEBUG
