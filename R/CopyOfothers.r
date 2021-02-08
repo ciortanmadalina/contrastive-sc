@@ -154,7 +154,7 @@ print(data_list)
 
 print(data_list[14])
 # "mouse_bladder_cell_select_2100.h5"
-for(i in 6:length(data_list)){
+for(i in 11:length(data_list)){
   cur_data = data_list[i]
   file = paste0("../real_data/", cur_data)
   print(i)
@@ -181,29 +181,26 @@ for(i in 6:length(data_list)){
       print("finish SOUP cluster")
       write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
     }
-    print("begin RaceID cluster")
-    if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
-      race_list = RaceID_cluster(datacount, cell_label)
-      print(race_list)
-      print("finish RaceID cluster")
-      write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
+    
+    print("begin SIMLR cluster")
+    if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
+      simlr_list = SIMLR_cluster_large(datacount, cell_label)
+      print(simlr_list)
+      print("finish SIMLR cluster")
+      write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
     }
-    
-    
-
 
   }
   
 }
 
-print("begin SIMLR cluster")
-if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
-  simlr_list = SIMLR_cluster_large(datacount, cell_label)
-  print(simlr_list)
-  print("finish SIMLR cluster")
-  write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
+print("begin RaceID cluster")
+if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
+  race_list = RaceID_cluster(datacount, cell_label)
+  print(race_list)
+  print("finish RaceID cluster")
+  write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
 }
-
 category = "imbalanced_data"
 data_list = list.files(paste0("simulated_data/", category),full.names = FALSE, recursive = FALSE)
 print(data_list)

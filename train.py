@@ -22,7 +22,7 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
-
+import time
 import models
 import st_loss
 import utils
@@ -168,7 +168,8 @@ def train_model(X,
                 dropout=0.8,
                 evaluate = False,
                 layers = [256, 64, 32],
-                save_pred = False):
+                save_pred = False,
+                noise = None):
     device = get_device()
     dims = np.concatenate([[X.shape[1]], layers])#[X.shape[1], 256, 64, 32]
     model = models.ContrastiveRepresentation(dims, dropout=dropout)
@@ -201,9 +202,14 @@ def train_model(X,
                 continue
             c_idx = idx[c_idx]
             c_inp = X[c_idx]
-
-            input1 = torch.FloatTensor(c_inp).to(device)
-            input2 = torch.FloatTensor(c_inp).to(device)
+            if noise is not None:
+                noise_vec = np.random.normal(size = c_inp.shape)/noise
+                input1 = torch.FloatTensor(c_inp + noise_vec).to(device)
+                noise_vec = np.random.normal(size = c_inp.shape)/noise
+                input2 = torch.FloatTensor(c_inp + noise_vec).to(device)
+            else:
+                input1 = torch.FloatTensor(c_inp).to(device)
+                input2 = torch.FloatTensor(c_inp).to(device)
 
             anchors_output = model(input1)
             neighbors_output = model(input2)
@@ -249,9 +255,11 @@ def run(X,
         n_ensemble=1,
         layers = [256, 64, 32],
         save_to="data/",
-        save_pred = False):
+        save_pred = False,
+        noise = None):
     results = {}
     embeddings = []
+    start = time.time()
     for i in range(n_ensemble):
         f = train.train_model(X,
                   cluster_number,
@@ -262,14 +270,17 @@ def run(X,
                   dropout=dropout,
                   layers = layers,
                   evaluate=evaluate,
-                  save_pred= save_pred)
+                  save_pred= save_pred,
+                  noise = noise)
         if save_pred:
             results[f"features_{i}"] = f
         embeddings.append(f)
+    elapsed = time.time() -start
     if Y is not None:
-        res_eval = train.evaluate(embeddings, cluster_number, Y)
+        res_eval = train.evaluate(embeddings, cluster_number, Y, save_pred = save_pred)
     results = {**results, **res_eval}
     results["dataset"] = dataset
+    results["time"] = elapsed
 #     if os.path.isdir(save_to) == False:
 #         os.makedirs(save_to)
 #     with open(f"{save_to}/{dataset}.pickle", 'wb') as handle:
