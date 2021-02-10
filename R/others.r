@@ -192,27 +192,27 @@ for(i in 1:length(data_list)){
       print("finish SOUP cluster")
       write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
     }
-    print("begin RaceID cluster")
-    if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
-      race_list = RaceID_cluster(datacount, cell_label)
-      print(race_list)
-      print("finish RaceID cluster")
-      write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
-    }
-    
 
+    print("begin SIMLR cluster")
+    if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
+      simlr_list = SIMLR_cluster_large(datacount, cell_label)
+      print(simlr_list)
+      print("finish SIMLR cluster")
+      write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
+    }
   }
   
 }
 
-
-print("begin SIMLR cluster")
-if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
-  simlr_list = SIMLR_cluster_large(datacount, cell_label)
-  print(simlr_list)
-  print("finish SIMLR cluster")
-  write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
+print("begin RaceID cluster")
+if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
+  race_list = RaceID_cluster(datacount, cell_label)
+  print(race_list)
+  print("finish RaceID cluster")
+  write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
 }
+
+
 category = "balanced_data"
 data_list = list.files(paste0("simulated_data/", category),full.names = FALSE, recursive = FALSE)
 print(data_list)
