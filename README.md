@@ -24,7 +24,7 @@ In this work, we propose contrastive-sc, an unsupervised deep learning method to
 - **Input size analysis and Dropout analysis** explore the importance of the number of selected genes and that of the data augmentation
 
 ## Environment Setup
-We have employed a docker containers to facilitate reproducing the paper results.
+We have employed a docker container to facilitate reproducing the paper results.
 
 ### Python environment
 It can be launched by running the following:

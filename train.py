@@ -147,14 +147,17 @@ def evaluate(embeddings, cluster_number, Y, save_pred = False):
     return result
 
 
-def get_device():
+def get_device(use_cpu):
     """[summary]
 
     Returns:
         [type]: [description]
     """
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
+    if use_cpu is None:
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+        else:
+            device = torch.device('cpu')
     else:
         device = torch.device('cpu')
     return device
@@ -169,8 +172,10 @@ def train_model(X,
                 evaluate = False,
                 layers = [256, 64, 32],
                 save_pred = False,
-                noise = None):
-    device = get_device()
+                noise = None,
+                use_cpu = None):
+    device = get_device(use_cpu)
+
     dims = np.concatenate([[X.shape[1]], layers])#[X.shape[1], 256, 64, 32]
     model = models.ContrastiveRepresentation(dims, dropout=dropout)
     model.to(device)
@@ -183,7 +188,6 @@ def train_model(X,
                                                            eta_min=0.0)
 
     criterion_rep = st_loss.SupConLoss(temperature=temperature)
-    criterion_rep = criterion_rep.cuda()
 
     batch_size = 200
 
@@ -202,14 +206,15 @@ def train_model(X,
                 continue
             c_idx = idx[c_idx]
             c_inp = X[c_idx]
-            if noise is not None:
-                noise_vec = np.random.normal(size = c_inp.shape)/noise
-                input1 = torch.FloatTensor(c_inp + noise_vec).to(device)
-                noise_vec = np.random.normal(size = c_inp.shape)/noise
-                input2 = torch.FloatTensor(c_inp + noise_vec).to(device)
-            else:
+            if noise is None or noise ==0:
                 input1 = torch.FloatTensor(c_inp).to(device)
                 input2 = torch.FloatTensor(c_inp).to(device)
+            else:
+                noise_vec = np.random.normal(loc = 0, scale = noise, size = c_inp.shape)
+                input1 = torch.FloatTensor(c_inp + noise_vec).to(device)
+                noise_vec = np.random.normal(loc = 0, scale = noise, size = c_inp.shape)
+                input2 = torch.FloatTensor(c_inp + noise_vec).to(device)
+
 
             anchors_output = model(input1)
             neighbors_output = model(input2)
@@ -256,7 +261,8 @@ def run(X,
         layers = [256, 64, 32],
         save_to="data/",
         save_pred = False,
-        noise = None):
+        noise = None,
+        use_cpu = None):
     results = {}
     embeddings = []
     start = time.time()
@@ -271,7 +277,8 @@ def run(X,
                   layers = layers,
                   evaluate=evaluate,
                   save_pred= save_pred,
-                  noise = noise)
+                  noise = noise, 
+                  use_cpu = use_cpu)
         if save_pred:
             results[f"features_{i}"] = f
         embeddings.append(f)
