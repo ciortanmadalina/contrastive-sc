@@ -21,7 +21,8 @@ import torch.nn as nn
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
+from sklearn.metrics import (adjusted_rand_score, normalized_mutual_info_score,
+                             silhouette_score, calinski_harabasz_score)
 import time
 import models
 import st_loss
@@ -114,35 +115,39 @@ def evaluate(embeddings, cluster_number, Y, save_pred = False):
         pred = kmeans.fit_predict(embeddings[i])
         result[f"kmeans_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"kmeans_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
+        result[f"kmeans_sil_{i}"] = silhouette_score(embeddings[i], pred)
+        result["t1"] = time.time()
         if save_pred:
             result[f"kmeans_pred_{i}"] = pred
-
+        
         # evaluate leiden
         pred = utils.run_leiden(embeddings[i])
         result[f"leiden_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"leiden_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
+        result[f"leiden_sil_{i}"] = silhouette_score(embeddings[i], pred)
+        result["t2"] = time.time()
         if save_pred:
             result[f"leiden_pred_{i}"] = pred
 
-    if len(embeddings)>1:
-        # combined results
-        combined_embeddings = np.hstack(embeddings)
-        # evaluate K-Means
-        kmeans = KMeans(n_clusters=cluster_number,
-                        init="k-means++",
-                        random_state=0)
-        pred = kmeans.fit_predict(combined_embeddings)
-        result[f"COMBINED_kmeans_ari"] = adjusted_rand_score(Y, pred)
-        result[f"COMBINED_kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
-        if save_pred:
-            result[f"COMBINED_kmeans_pred"] = pred
+#     if len(embeddings)>1:
+#         # combined results
+#         combined_embeddings = np.hstack(embeddings)
+#         # evaluate K-Means
+#         kmeans = KMeans(n_clusters=cluster_number,
+#                         init="k-means++",
+#                         random_state=0)
+#         pred = kmeans.fit_predict(combined_embeddings)
+#         result[f"COMBINED_kmeans_ari"] = adjusted_rand_score(Y, pred)
+#         result[f"COMBINED_kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
+#         if save_pred:
+#             result[f"COMBINED_kmeans_pred"] = pred
 
-        # evaluate leiden
-        pred = utils.run_leiden(combined_embeddings)
-        result[f"COMBINED_leiden_ari"] = adjusted_rand_score(Y, pred)
-        result[f"COMBINED_leiden_nmi"] = normalized_mutual_info_score(Y, pred)
-        if save_pred:
-            result[f"COMBINED_leiden_pred"] = pred
+#         # evaluate leiden
+#         pred = utils.run_leiden(combined_embeddings)
+#         result[f"COMBINED_leiden_ari"] = adjusted_rand_score(Y, pred)
+#         result[f"COMBINED_leiden_nmi"] = normalized_mutual_info_score(Y, pred)
+#         if save_pred:
+#             result[f"COMBINED_leiden_pred"] = pred
 
 
     return result
