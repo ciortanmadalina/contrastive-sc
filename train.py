@@ -57,36 +57,37 @@ def preprocess(X, nb_genes = 500):
     X = adata.X.astype(np.float32)
     return X
 
-def adjust_learning_rate( optimizer, epoch):
+def adjust_learning_rate( optimizer, epoch, lr):
     p = {
       'epochs': 500,
      'optimizer': 'sgd',
      'optimizer_kwargs': {'nesterov': False,
-      'weight_decay': 0.0001,
-      'momentum': 0.9,
-      'lr': 0.4},
+              'weight_decay': 0.0001,
+              'momentum': 0.9,
+#               'lr': 0.4
+                         },
      'scheduler': 'cosine',
      'scheduler_kwargs': {'lr_decay_rate': 0.1},
      }
-    lr = p['optimizer_kwargs']['lr']
+#     lr = p['optimizer_kwargs']['lr']
     
     if p['scheduler'] == 'cosine':
         eta_min = lr * (p['scheduler_kwargs']['lr_decay_rate'] ** 3)
-        lr = eta_min + (lr - eta_min) * (1 + math.cos(math.pi * epoch / p['epochs'])) / 2
+        new_lr = eta_min + (lr - eta_min) * (1 + math.cos(math.pi * epoch / p['epochs'])) / 2
          
     elif p['scheduler'] == 'step':
         steps = np.sum(epoch > np.array(p['scheduler_kwargs']['lr_decay_epochs']))
         if steps > 0:
-            lr = lr * (p['scheduler_kwargs']['lr_decay_rate'] ** steps)
+            new_lr = lr * (p['scheduler_kwargs']['lr_decay_rate'] ** steps)
 
     elif p['scheduler'] == 'constant':
-        lr = lr
+        new_lr = lr
 
     else:
         raise ValueError('Invalid learning rate schedule {}'.format(p['scheduler']))
 
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['lr'] = new_lr
 
     return lr
 def evaluate(embeddings, cluster_number, Y, save_pred = False):
@@ -196,7 +197,7 @@ def train_model(X,
     for epoch in range(nb_epochs):
 
         model.train()
-        lr = adjust_learning_rate(optimizer, epoch)
+        adjust_learning_rate(optimizer, epoch, lr)
         np.random.shuffle(idx)
         loss_ = 0
         for pre_index in range(len(X) // batch_size + 1):

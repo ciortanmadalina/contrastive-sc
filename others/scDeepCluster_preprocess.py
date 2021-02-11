@@ -108,8 +108,8 @@ def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=
     if normalize_input:
         sc.pp.scale(adata)
 
-    sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, 
-                                min_disp=0.5, n_top_genes = 4000, subset=True)
+#     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, 
+#                                 min_disp=0.5, n_top_genes = 4000, subset=True)
     return adata
 
 def read_genelist(filename):
