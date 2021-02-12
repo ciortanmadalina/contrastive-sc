@@ -116,6 +116,7 @@ def evaluate(embeddings, cluster_number, Y, save_pred = False):
         result[f"kmeans_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"kmeans_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
         result[f"kmeans_sil_{i}"] = silhouette_score(embeddings[i], pred)
+        result[f"kmeans_cal_{i}"] = calinski_harabasz_score(embeddings[i], pred)
         result["t1"] = time.time()
         if save_pred:
             result[f"kmeans_pred_{i}"] = pred
@@ -125,6 +126,7 @@ def evaluate(embeddings, cluster_number, Y, save_pred = False):
         result[f"leiden_ari_{i}"] = adjusted_rand_score(Y, pred)
         result[f"leiden_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
         result[f"leiden_sil_{i}"] = silhouette_score(embeddings[i], pred)
+        result[f"leiden_cal_{i}"] = calinski_harabasz_score(embeddings[i], pred)
         result["t2"] = time.time()
         if save_pred:
             result[f"leiden_pred_{i}"] = pred

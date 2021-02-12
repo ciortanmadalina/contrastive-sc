@@ -14,6 +14,8 @@ require(SOUP)
 require(RaceID)
 library(SOUP)
 library(cidr)
+library (cluster)
+library(fpc)
 read_clean <- function(data) {  
   if (length(dim(data)) == 1) {
     data <- as.vector(data)
@@ -67,7 +69,10 @@ CIDR_cluster = function(data, label){
   sc_cidr = scCluster(sc_cidr, nCluster = max(label) - min(label) + 1)
   nmi = compare(label, sc_cidr@clusters, method = "nmi")
   ari = compare(label, sc_cidr@clusters, method = "adjusted.rand")
-  return(c(ari,nmi, sc_cidr@clusters))
+  ss <- silhouette(sc_cidr@clusters, dist(sc_cidr@PC))
+  ss <-mean(ss[, 3])
+  cal <- calinhara(sc_cidr@PC,sc_cidr@clusters,cn=max(sc_cidr@clusters))
+  return(c(ari,nmi,ss, cal, sc_cidr@clusters))
 }
 
 
@@ -76,7 +81,7 @@ scaleRowSums <- function(x) {
   return (t(scale(t(x), center=FALSE, scale=rowSums(x))))
 }
 
-SOUP_cluster=function(data,label){
+SOUP_cluster=function(data,label, category,cur_data){
   data = t(data)
   colnames(data) = as.vector(seq(ncol(data)))
   data<-log2(scaleRowSums(data)*10^4 + 1)
@@ -93,7 +98,7 @@ SOUP_cluster=function(data,label){
 
 ######## find SIMLR cluster  ######  
 
-SIMLR_cluster_large = function(data, label){
+SIMLR_cluster_large = function(data, label, category,cur_data){
   res_large_scale = SIMLR_Large_Scale(X = data, c = length(unique(label)),normalize = TRUE)
   nmi = compare(label, res_large_scale$y$cluster, method = "nmi")
   ari = compare(label, res_large_scale$y$cluster, method = "adjusted.rand")
@@ -112,7 +117,7 @@ datascale<-function(x){
     return(30)
   }else  {return(50)}
 }
-RaceID_cluster<-function(data,label){
+RaceID_cluster<-function(data,label, category,cur_data){
   
   scale<-datascale(ncol(data))
   sc <- SCseq(data)
@@ -147,14 +152,47 @@ setwd("/home/rstudio/projects/contrastive-sc/R")
 
 ######    read list of experiment data #####
 
-i = 1
+i = 9
 category = "real_data"
 data_list = list.files("../real_data",full.names = FALSE, recursive = FALSE)
 print(data_list)
 
-print(data_list[14])
+cur_data = data_list[i]
+file = paste0("../real_data/", cur_data)
+print(i)
+print(cur_data)
+print(file)
+output = get_input_data(file)
+data = output[[1]]
+label =output[[2]]
+print(nrow(data)) # 23000
+print(ncol(data)) # 3660
+library (cluster)
+library(fpc)
+
+sc_cidr = scDataConstructor(data)
+sc_cidr = determineDropoutCandidates(sc_cidr)
+sc_cidr = wThreshold(sc_cidr)
+sc_cidr = scDissim(sc_cidr)
+sc_cidr = scPCA(sc_cidr,plotPC = FALSE)
+sc_cidr = nPC(sc_cidr)
+#write.csv(sc_cidr@PC, paste0("data_results/",category, "/", cur_data, "_cidr.csv"))
+#print(paste0("wrote data_results/",category, "/", cur_data, "_cidr.csv"))
+sc_cidr = scCluster(sc_cidr, nCluster = max(label) - min(label) + 1)
+#nmi = compare(label, sc_cidr@clusters, method = "nmi")
+print(compare(label, sc_cidr@clusters, method = "adjusted.rand"))
+ss <- silhouette(sc_cidr@clusters, dist(sc_cidr@PC))
+ss <-mean(ss[, 3])
+cal <- calinhara(sc_cidr@PC,sc_cidr@clusters,cn=max(sc_cidr@clusters))
+print(calinhara(sc_cidr@PC,sc_cidr@clusters,cn=max(sc_cidr@clusters)))
+
+
+write.csv(sc_cidr@PC, paste0("data_results/",category, "/", cur_data, "_soup.csv"))
+print(nrow(sc_cidr@PC)) # 23000
+print(ncol(sc_cidr@PC)) # 3660
+
 # "mouse_bladder_cell_select_2100.h5"
-for(i in 11:length(data_list)){
+for(i in 1:length(data_list)){
   cur_data = data_list[i]
   file = paste0("../real_data/", cur_data)
   print(i)
@@ -165,33 +203,27 @@ for(i in 11:length(data_list)){
   cell_label =output[[2]]
   print(nrow(datacount)) # 23000
   print(ncol(datacount)) # 3660
-  for(run in 1:2){
-    print("begin CIDR cluster")
-    if (file.exists(paste0("results/",category, "/", cur_data, "_cidr_", run,".csv")) == FALSE){
-      cidr_list = CIDR_cluster(datacount, cell_label)
-      print(cidr_list)
-      print("finish CIDR cluster")
-      write.csv(cidr_list, paste0("results/",category, "/", cur_data, "_cidr_", run,".csv"))
-    }
-    
-    print("begin SOUP cluster")
-    if (file.exists(paste0("results/",category, "/", cur_data, "_soup_", run,".csv")) == FALSE){
-      soup_list = SOUP_cluster(datacount, cell_label)
-      print(soup_list)
-      print("finish SOUP cluster")
-      write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
-    }
-    
-    print("begin SIMLR cluster")
-    if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
-      simlr_list = SIMLR_cluster_large(datacount, cell_label)
-      print(simlr_list)
-      print("finish SIMLR cluster")
-      write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
-    }
 
+  print("begin CIDR cluster")
+  if (file.exists(paste0("data_results/",category, "/", cur_data, "_cidr.csv")) == FALSE){
+    cidr_list = CIDR_cluster(datacount, cell_label, category,cur_data)
   }
-  
+}
+
+print("begin SOUP cluster")
+if (file.exists(paste0("results/",category, "/", cur_data, "_soup_", run,".csv")) == FALSE){
+  soup_list = SOUP_cluster(datacount, cell_label)
+  print(soup_list)
+  print("finish SOUP cluster")
+  write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
+}
+
+print("begin SIMLR cluster")
+if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv")) == FALSE){
+  simlr_list = SIMLR_cluster_large(datacount, cell_label)
+  print(simlr_list)
+  print("finish SIMLR cluster")
+  write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
 }
 
 print("begin RaceID cluster")
