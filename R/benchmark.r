@@ -132,19 +132,27 @@ datascale<-function(x){
 }
 RaceID_cluster<-function(data,label){
   starttime <- Sys.time()
-  scale<-datascale(ncol(data))
+  #scale<-datascale(ncol(data))
+  scale<-50
   sc <- SCseq(data)
   sc <- filterdata(sc,mintotal = 1)
-  
+
   sc <- compdist(sc,metric="pearson")
-  
-  sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmeans")
+  sc <- comptsne(sc)
+  fdata <-sc@tsne
+  sc <- clustexp(sc)
+  #sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmeans")
+  #sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmedoids")
   endtime <- Sys.time()
   timetaken <- as.numeric(endtime - starttime)
-  nmi<-compare(as.numeric(sc@cluster$kpart),label,method="nmi")
-  ari<-compare(as.numeric(sc@cluster$kpart),label,method="adjusted.rand")
+  pred <-as.numeric(sc@cluster$kpart)
+  ss <- silhouette(pred, dist(fdata))
+  ss <-mean(ss[, 3])
+  nmi<-compare(pred,label,method="nmi")
+  ari<-compare(pred,label,method="adjusted.rand")
   
-  return(c(ari,nmi, timetaken, as.numeric(sc@cluster$kpart)))  
+  cal <- calinhara(data,pred,cn=max(pred))
+  return(c(ari,nmi,ss, cal,timetaken, pred))
 }  
 
 get_input_data<-function(data_path){
@@ -185,6 +193,15 @@ for(i in 1:length(data_list)){
   print(nrow(datacount)) #
   print(ncol(datacount)) # 
   for(run in 1:2){
+    
+    print("begin RaceID cluster")
+    if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
+      race_list = RaceID_cluster(datacount, cell_label)
+      print(race_list)
+      print("finish RaceID cluster")
+      write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
+    }
+    
     print("begin CIDR cluster")
     if (file.exists(paste0("results/",category, "/", cur_data, "_cidr_", run,".csv")) == FALSE){
       cidr_list = CIDR_cluster(datacount, cell_label)
@@ -210,13 +227,7 @@ if (file.exists(paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"
   print("finish SIMLR cluster")
   write.csv(simlr_list, paste0("results/", category, "/",cur_data, "_simlr_", run,".csv"))
 }
-print("begin RaceID cluster")
-if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
-  race_list = RaceID_cluster(datacount, cell_label)
-  print(race_list)
-  print("finish RaceID cluster")
-  write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
-}
+
 
 
 category = "balanced_data"
@@ -238,6 +249,15 @@ for(i in 15:length(data_list)){
   print(nrow(datacount)) # 23000
   print(ncol(datacount)) # 3660
   for(run in 1:2){
+    
+    print("begin RaceID cluster")
+    if (file.exists(paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv")) == FALSE){
+      race_list = RaceID_cluster(datacount, cell_label)
+      print(race_list)
+      print("finish RaceID cluster")
+      write.csv(race_list, paste0("results/",category, "/", cur_data,  "_raceid_", run,".csv"))
+    }
+    
     print("begin CIDR cluster")
     if (file.exists(paste0("results/",category, "/", cur_data, "_cidr_", run,".csv")) == FALSE){
       cidr_list = CIDR_cluster(datacount, cell_label)
@@ -253,7 +273,6 @@ for(i in 15:length(data_list)){
       print("finish SOUP cluster")
       write.csv(soup_list, paste0("results/",category, "/", cur_data, "_soup_", run,".csv"))
     }
-    
   }
 }
 

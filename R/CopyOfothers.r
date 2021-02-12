@@ -176,6 +176,42 @@ sc_cidr = wThreshold(sc_cidr)
 sc_cidr = scDissim(sc_cidr)
 sc_cidr = scPCA(sc_cidr,plotPC = FALSE)
 sc_cidr = nPC(sc_cidr)
+sc_cidr = scCluster(sc_cidr, nCluster = max(label) - min(label) + 1)
+nmi = compare(label, sc_cidr@clusters, method = "nmi")
+ari = compare(label, sc_cidr@clusters, method = "adjusted.rand")
+ss <- silhouette(sc_cidr@clusters, dist(sc_cidr@PC))
+print(sc_cidr@PC)
+
+sc <- SCseq(data)
+sc <- filterdata(sc,mintotal = 1)
+
+sc <- compdist(sc,metric="pearson")
+sc <- comptsne(sc)
+fdata <-sc@tsne
+print(nrow(fdata)) # 23000
+print(ncol(fdata)) # 3660
+sc <- clustexp(sc)
+pred <-as.numeric(sc@cluster$kpart)
+ss <- silhouette(pred, dist(fdata))
+ss <-mean(ss[, 3])
+print(ss)
+fdata <- getfdata(sc)
+sc <- comptsne(sc)
+#sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmeans")
+#sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmedoids")
+nmi<-compare(pred,label,method="nmi")
+ari<-compare(pred,label,method="adjusted.rand")
+print(ari)
+print(length(sc@cluster))
+fdata <- getfdata(sc)
+r = sc@expdata
+
+print(nrow(fdata)) # 23000
+print(ncol(fdata)) # 3660
+ss <- silhouette(sc@cluster$kpart, dist(fdata))
+print(sc@cluster)
+ss <-mean(ss[, 3])
+
 #write.csv(sc_cidr@PC, paste0("data_results/",category, "/", cur_data, "_cidr.csv"))
 #print(paste0("wrote data_results/",category, "/", cur_data, "_cidr.csv"))
 sc_cidr = scCluster(sc_cidr, nCluster = max(label) - min(label) + 1)
