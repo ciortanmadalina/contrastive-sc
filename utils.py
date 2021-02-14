@@ -99,7 +99,7 @@ def cluster_acc(y_true, y_pred):
     return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size
 
 
-def run_leiden(data):
+def run_leiden(data, leiden_n_neighbors=300):
     """
     Performs Leiden community detection on given data.
 
@@ -112,10 +112,9 @@ def run_leiden(data):
         [type]: [description]
     """
     import scanpy.api as sc
-    n_neighbors=300
     n_pcs=0
     adata = sc.AnnData(data)
-    sc.pp.neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=leiden_n_neighbors, n_pcs=n_pcs, use_rep='X')
     sc.tl.leiden(adata)
     pred = adata.obs['leiden'].to_list()
     pred = [int(x) for x in pred]
