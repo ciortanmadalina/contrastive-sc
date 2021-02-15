@@ -152,7 +152,7 @@ setwd("/home/rstudio/projects/contrastive-sc/R")
 
 ######    read list of experiment data #####
 
-i = 9
+i = 14
 category = "real_data"
 data_list = list.files("../real_data",full.names = FALSE, recursive = FALSE)
 print(data_list)
@@ -169,6 +169,73 @@ print(nrow(data)) # 23000
 print(ncol(data)) # 3660
 library (cluster)
 library(fpc)
+
+
+scale<-datascale(ncol(data))
+sc <- SCseq(data)
+sc <- filterdata(sc,mintotal = 1000)
+fdata <- getfdata(sc)
+sc <- compdist(sc,metric="pearson")
+sc <- comptsne(sc)
+fdata <-sc@tsne
+print(nrow(fdata)) # 23000
+print(ncol(fdata)) # 3660
+idx <-as.integer(colnames(fdata))
+idx
+label[idx]
+label[c(2,3, 4)]
+length(colnames(fdata))
+print("starting clustering")
+sc <- clustexp(sc,  bootnr=scale)
+print("done clustering")
+#sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmeans")
+#sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmedoids")
+endtime <- Sys.time()
+timetaken <- as.numeric(endtime - starttime)
+pred <-as.numeric(sc@cluster$kpart)
+ss <- silhouette(pred, dist(fdata))
+ss <-mean(ss[, 3])
+nmi<-compare(pred,label,method="nmi")
+ari<-compare(pred,label,method="adjusted.rand")
+length(pred)
+length(label)
+cal <- calinhara(data,pred,cn=max(pred))
+
+sc@ndata
+
+sc <- SCseq(data)
+sc <- filterdata(sc,mintotal = 1000)
+sc <- compdist(sc,metric="pearson")
+
+fdata <- getfdata(sc)
+print(nrow(fdata)) # 23000
+print(ncol(fdata)) # 3660
+
+
+stddd <- apply(fdata, 2, sd, na.rm = TRUE)
+min(stddd)
+fdata1 = fdata[,apply(fdata, 2, sd, na.rm = TRUE) > 0]
+print(nrow(fdata)) # 23000
+print(ncol(fdata)) # 3660
+print(nrow(fdata1)) # 23000
+print(ncol(fdata1)) # 3660
+sc <- SCseq(fdata1)
+fdata1
+
+sc <- compdist(sc,metric="pearson")
+#sc <- comptsne(sc)
+#fdata <-sc@tsne
+#sc <- clustexp(sc)
+sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmeans")
+#sc<-clustexp(sc,cln=(max(label)-min(label)+1),sat=FALSE,bootnr=scale,FUNcluster = "kmedoids")
+endtime <- Sys.time()
+timetaken <- as.numeric(endtime - starttime)
+pred <-as.numeric(sc@cluster$kpart)
+ss <- silhouette(pred, dist(fdata))
+ss <-mean(ss[, 3])
+nmi<-compare(pred,label,method="nmi")
+ari<-compare(pred,label,method="adjusted.rand")
+
 
 sc_cidr = scDataConstructor(data)
 sc_cidr = determineDropoutCandidates(sc_cidr)

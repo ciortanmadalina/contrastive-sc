@@ -5,8 +5,10 @@ By Madalina Ciortan (01/10/2020)
 """
 import argparse
 import copy
+import math
 import os
 import pickle
+import time
 import warnings
 from collections import Counter
 
@@ -21,14 +23,14 @@ import torch.nn as nn
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.metrics import (adjusted_rand_score, normalized_mutual_info_score,
-                             silhouette_score, calinski_harabasz_score)
-import time
+from sklearn.metrics import (adjusted_rand_score, calinski_harabasz_score,
+                             normalized_mutual_info_score, silhouette_score)
+
 import models
 import st_loss
+import train
 import utils
-import math
-import train 
+
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
@@ -65,12 +67,12 @@ def adjust_learning_rate( optimizer, epoch, lr):
      'optimizer_kwargs': {'nesterov': False,
               'weight_decay': 0.0001,
               'momentum': 0.9,
-#               'lr': 0.4
+
                          },
      'scheduler': 'cosine',
      'scheduler_kwargs': {'lr_decay_rate': 0.1},
      }
-#     lr = p['optimizer_kwargs']['lr']
+
     
     if p['scheduler'] == 'cosine':
         eta_min = lr * (p['scheduler_kwargs']['lr_decay_rate'] ** 3)
@@ -91,68 +93,6 @@ def adjust_learning_rate( optimizer, epoch, lr):
         param_group['lr'] = new_lr
 
     return lr
-def evaluate(embeddings, cluster_number, Y, save_pred = False):
-    """
-    Computes the ARI scores of all experiments ran as part of train method.
-
-    Args:
-        embeddings ([type]): [description]
-        cluster_network_pred ([type]): [description]
-        cluster_number ([type]): [description]
-        Y ([type]): [description]
-
-    Returns:
-        [type]: [description]
-    """
-    result = {}
-    if Y is None:
-        return result
-    for i in range(len(embeddings)):
-        # evaluate K-Means
-        kmeans = KMeans(n_clusters=cluster_number,
-                        init="k-means++",
-                        random_state=0)
-        pred = kmeans.fit_predict(embeddings[i])
-        result[f"kmeans_ari_{i}"] = adjusted_rand_score(Y, pred)
-        result[f"kmeans_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
-        result[f"kmeans_sil_{i}"] = silhouette_score(embeddings[i], pred)
-        result[f"kmeans_cal_{i}"] = calinski_harabasz_score(embeddings[i], pred)
-        result["t1"] = time.time()
-        if save_pred:
-            result[f"kmeans_pred_{i}"] = pred
-        
-        # evaluate leiden
-        pred = utils.run_leiden(embeddings[i])
-        result[f"leiden_ari_{i}"] = adjusted_rand_score(Y, pred)
-        result[f"leiden_nmi_{i}"] = normalized_mutual_info_score(Y, pred)
-        result[f"leiden_sil_{i}"] = silhouette_score(embeddings[i], pred)
-        result[f"leiden_cal_{i}"] = calinski_harabasz_score(embeddings[i], pred)
-        result["t2"] = time.time()
-        if save_pred:
-            result[f"leiden_pred_{i}"] = pred
-
-#     if len(embeddings)>1:
-#         # combined results
-#         combined_embeddings = np.hstack(embeddings)
-#         # evaluate K-Means
-#         kmeans = KMeans(n_clusters=cluster_number,
-#                         init="k-means++",
-#                         random_state=0)
-#         pred = kmeans.fit_predict(combined_embeddings)
-#         result[f"COMBINED_kmeans_ari"] = adjusted_rand_score(Y, pred)
-#         result[f"COMBINED_kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
-#         if save_pred:
-#             result[f"COMBINED_kmeans_pred"] = pred
-
-#         # evaluate leiden
-#         pred = utils.run_leiden(combined_embeddings)
-#         result[f"COMBINED_leiden_ari"] = adjusted_rand_score(Y, pred)
-#         result[f"COMBINED_leiden_nmi"] = normalized_mutual_info_score(Y, pred)
-#         if save_pred:
-#             result[f"COMBINED_leiden_pred"] = pred
-
-
-    return result
 
 
 def get_device(use_cpu):
@@ -177,11 +117,30 @@ def train_model(X,
                 lr=1e-5,
                 temperature=0.07,
                 dropout=0.8,
-                evaluate = False,
+                evaluate_training = False,
                 layers = [256, 64, 32],
                 save_pred = False,
                 noise = None,
                 use_cpu = None):
+    """[summary]
+
+    Args:
+        X ([type]): [description]
+        cluster_number ([type]): [description]
+        Y ([type], optional): [description]. Defaults to None.
+        nb_epochs (int, optional): [description]. Defaults to 20.
+        lr ([type], optional): [description]. Defaults to 1e-5.
+        temperature (float, optional): [description]. Defaults to 0.07.
+        dropout (float, optional): [description]. Defaults to 0.8.
+        evaluate_training (bool, optional): [description]. Defaults to False.
+        layers (list, optional): [description]. Defaults to [256, 64, 32].
+        save_pred (bool, optional): [description]. Defaults to False.
+        noise ([type], optional): [description]. Defaults to None.
+        use_cpu ([type], optional): [description]. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """
     device = get_device(use_cpu)
 
     dims = np.concatenate([[X.shape[1]], layers])#[X.shape[1], 256, 64, 32]
@@ -191,12 +150,7 @@ def train_model(X,
                                         model.parameters()),
                                  lr=lr)
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                           T_max=nb_epochs,
-                                                           eta_min=0.0)
-
     criterion_rep = st_loss.SupConLoss(temperature=temperature)
-
     batch_size = 200
 
     losses = []
@@ -237,14 +191,14 @@ def train_model(X,
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
-        if evaluate:
+        if evaluate_training and Y is not None:
             model.eval()
             with torch.no_grad():
                 result = model(torch.FloatTensor(X))
                 features = result.detach().cpu().numpy()
-            res = train.evaluate([features], cluster_number, Y, save_pred = save_pred)
+            res = train.cluster_embedding([features], cluster_number, Y, save_pred = save_pred)
             print(
-                f"{epoch}). Loss {loss_}, ARI {res['kmeans_ari_0']}, {res['leiden_ari_0']}"
+                f"{epoch}). Loss {loss_}, ARI {res['kmeans_ari']}, {res['leiden_ari']}"
             )
 
         losses.append(loss_)
@@ -260,39 +214,57 @@ def run(X,
         cluster_number,
         dataset,
         Y=None,
-        nb_epochs=20,
-        lr=1e-5,
+        nb_epochs=30,
+        lr=0.4,
         temperature=0.07,
-        dropout=0.8,
-        evaluate=True,
-        n_ensemble=1,
+        dropout=0.9,
         layers = [256, 64, 32],
         save_to="data/",
         save_pred = False,
         noise = None,
-        use_cpu = None):
+        use_cpu = None,
+        evaluate_training = False,
+        leiden_n_neighbors=300):
+    """[summary]
+
+    Args:
+        X ([type]): [description]
+        cluster_number ([type]): [description]
+        dataset ([type]): [description]
+        Y ([type], optional): [description]. Defaults to None.
+        nb_epochs (int, optional): [description]. Defaults to 30.
+        lr (float, optional): [description]. Defaults to 0.4.
+        temperature (float, optional): [description]. Defaults to 0.07.
+        dropout (float, optional): [description]. Defaults to 0.9.
+        layers (list, optional): [description]. Defaults to [256, 64, 32].
+        save_to (str, optional): [description]. Defaults to "data/".
+        save_pred (bool, optional): [description]. Defaults to False.
+        noise ([type], optional): [description]. Defaults to None.
+        use_cpu ([type], optional): [description]. Defaults to None.
+        evaluate_training (bool, optional): [description]. Defaults to False.
+        leiden_n_neighbors (int, optional): [description]. Defaults to 300.
+    """
     results = {}
-    embeddings = []
+
     start = time.time()
-    for i in range(n_ensemble):
-        f = train.train_model(X,
-                  cluster_number,
-                  Y=Y,
-                  nb_epochs=nb_epochs,
-                  lr=lr,
-                  temperature=temperature,
-                  dropout=dropout,
-                  layers = layers,
-                  evaluate=evaluate,
-                  save_pred= save_pred,
-                  noise = noise, 
-                  use_cpu = use_cpu)
-        if save_pred:
-            results[f"features_{i}"] = f
-        embeddings.append(f)
+    embedding = train.train_model(X,
+              cluster_number,
+              Y=Y,
+              nb_epochs=nb_epochs,
+              lr=lr,
+              temperature=temperature,
+              dropout=dropout,
+              layers = layers,
+              evaluate_training=evaluate_training,
+              save_pred= save_pred,
+              noise = noise, 
+              use_cpu = use_cpu)
+    if save_pred:
+        results[f"features"] = embedding
     elapsed = time.time() -start
     if Y is not None:
-        res_eval = train.evaluate(embeddings, cluster_number, Y, save_pred = save_pred)
+        res_eval = train.cluster_embedding(embedding, cluster_number, Y, save_pred = save_pred,
+                                 leiden_n_neighbors=leiden_n_neighbors)
     results = {**results, **res_eval}
     results["dataset"] = dataset
     results["time"] = elapsed
@@ -301,3 +273,45 @@ def run(X,
 #     with open(f"{save_to}/{dataset}.pickle", 'wb') as handle:
 #         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return results
+
+
+def cluster_embedding(embedding, cluster_number, Y, save_pred = False, leiden_n_neighbors=300):
+    """[summary]
+
+    Args:
+        embedding ([type]): [description]
+        cluster_number ([type]): [description]
+        Y ([type]): [description]
+        save_pred (bool, optional): [description]. Defaults to False.
+        leiden_n_neighbors (int, optional): [description]. Defaults to 300.
+
+    Returns:
+        [type]: [description]
+    """
+    result = {"t_clust" : time.time()}
+    # evaluate K-Means
+    kmeans = KMeans(n_clusters=cluster_number,
+                    init="k-means++",
+                    random_state=0)
+    pred = kmeans.fit_predict(embedding)
+    if Y is not None:
+        result[f"kmeans_ari"] = adjusted_rand_score(Y, pred)
+        result[f"kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
+    result[f"kmeans_sil"] = silhouette_score(embedding, pred)
+    result[f"kmeans_cal"] = calinski_harabasz_score(embedding, pred)
+    result["t_k"] = time.time()
+    if save_pred:
+        result[f"kmeans_pred"] = pred
+
+    # evaluate leiden
+    pred = utils.run_leiden(embedding, leiden_n_neighbors)
+    if Y is not None:
+        result[f"leiden_ari"] = adjusted_rand_score(Y, pred)
+        result[f"leiden_nmi"] = normalized_mutual_info_score(Y, pred)
+    result[f"leiden_sil"] = silhouette_score(embedding, pred)
+    result[f"leiden_cal"] = calinski_harabasz_score(embedding, pred)
+    result["t_l"] = time.time()
+    if save_pred:
+        result[f"leiden_pred"] = pred
+
+    return result
