@@ -113,12 +113,12 @@ def get_device(use_cpu):
 def train_model(X,
                 cluster_number,
                 Y=None,
-                nb_epochs=20,
-                lr=1e-5,
+                nb_epochs=30,
+                lr=0.4,
                 temperature=0.07,
-                dropout=0.8,
+                dropout=0.9,
                 evaluate_training = False,
-                layers = [256, 64, 32],
+                layers = [200, 40, 60],
                 save_pred = False,
                 noise = None,
                 use_cpu = None):
@@ -218,11 +218,12 @@ def run(X,
         lr=0.4,
         temperature=0.07,
         dropout=0.9,
-        layers = [256, 64, 32],
+        layers = [200, 40, 60],
         save_to="data/",
         save_pred = False,
         noise = None,
         use_cpu = None,
+        cluster_methods = ["KMeans", "Leiden"],
         evaluate_training = False,
         leiden_n_neighbors=300):
     """[summary]
@@ -264,7 +265,7 @@ def run(X,
     elapsed = time.time() -start
     if Y is not None:
         res_eval = train.cluster_embedding(embedding, cluster_number, Y, save_pred = save_pred,
-                                 leiden_n_neighbors=leiden_n_neighbors)
+                                 leiden_n_neighbors=leiden_n_neighbors, cluster_methods = cluster_methods)
     results = {**results, **res_eval}
     results["dataset"] = dataset
     results["time"] = elapsed
@@ -275,7 +276,8 @@ def run(X,
     return results
 
 
-def cluster_embedding(embedding, cluster_number, Y, save_pred = False, leiden_n_neighbors=300):
+def cluster_embedding(embedding, cluster_number, Y, save_pred = False, 
+                      leiden_n_neighbors=300, cluster_methods =["KMeans", "Leiden"]):
     """[summary]
 
     Args:
@@ -289,29 +291,31 @@ def cluster_embedding(embedding, cluster_number, Y, save_pred = False, leiden_n_
         [type]: [description]
     """
     result = {"t_clust" : time.time()}
-    # evaluate K-Means
-    kmeans = KMeans(n_clusters=cluster_number,
-                    init="k-means++",
-                    random_state=0)
-    pred = kmeans.fit_predict(embedding)
-    if Y is not None:
-        result[f"kmeans_ari"] = adjusted_rand_score(Y, pred)
-        result[f"kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
-    result[f"kmeans_sil"] = silhouette_score(embedding, pred)
-    result[f"kmeans_cal"] = calinski_harabasz_score(embedding, pred)
-    result["t_k"] = time.time()
-    if save_pred:
-        result[f"kmeans_pred"] = pred
+    if "KMeans" in cluster_methods:
+        # evaluate K-Means
+        kmeans = KMeans(n_clusters=cluster_number,
+                        init="k-means++",
+                        random_state=0)
+        pred = kmeans.fit_predict(embedding)
+        if Y is not None:
+            result[f"kmeans_ari"] = adjusted_rand_score(Y, pred)
+            result[f"kmeans_nmi"] = normalized_mutual_info_score(Y, pred)
+        result[f"kmeans_sil"] = silhouette_score(embedding, pred)
+        result[f"kmeans_cal"] = calinski_harabasz_score(embedding, pred)
+        result["t_k"] = time.time()
+        if save_pred:
+            result[f"kmeans_pred"] = pred
 
-    # evaluate leiden
-    pred = utils.run_leiden(embedding, leiden_n_neighbors)
-    if Y is not None:
-        result[f"leiden_ari"] = adjusted_rand_score(Y, pred)
-        result[f"leiden_nmi"] = normalized_mutual_info_score(Y, pred)
-    result[f"leiden_sil"] = silhouette_score(embedding, pred)
-    result[f"leiden_cal"] = calinski_harabasz_score(embedding, pred)
-    result["t_l"] = time.time()
-    if save_pred:
-        result[f"leiden_pred"] = pred
+    if "Leiden" in cluster_methods:
+        # evaluate leiden
+        pred = utils.run_leiden(embedding, leiden_n_neighbors)
+        if Y is not None:
+            result[f"leiden_ari"] = adjusted_rand_score(Y, pred)
+            result[f"leiden_nmi"] = normalized_mutual_info_score(Y, pred)
+        result[f"leiden_sil"] = silhouette_score(embedding, pred)
+        result[f"leiden_cal"] = calinski_harabasz_score(embedding, pred)
+        result["t_l"] = time.time()
+        if save_pred:
+            result[f"leiden_pred"] = pred
 
     return result
