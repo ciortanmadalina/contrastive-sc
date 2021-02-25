@@ -15,7 +15,6 @@ We adapted the self-supervised contrastive learning framework, initially propose
 - model.py contains the network definition
 - st_loss.py contains the implementation of the loss functions
 - utils.py contains various utility functions
-- loop.py contains the same code as train.py but at a lower granularity
 
 ### Overview of notebooks
 - **Main.ipynb** represents the main entry point, contains code snipped to train the model on scRNA-seq data
