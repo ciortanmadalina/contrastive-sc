@@ -263,8 +263,7 @@ def run(X,
     if save_pred:
         results[f"features"] = embedding
     elapsed = time.time() -start
-    if Y is not None:
-        res_eval = train.cluster_embedding(embedding, cluster_number, Y, save_pred = save_pred,
+    res_eval = train.cluster_embedding(embedding, cluster_number, Y, save_pred = save_pred,
                                  leiden_n_neighbors=leiden_n_neighbors, cluster_methods = cluster_methods)
     results = {**results, **res_eval}
     results["dataset"] = dataset

@@ -10,7 +10,7 @@ RUN pip install jupyterlab \
     lmdb \
     attrdict \
     h5py \
-    scipy==1.1.0 \
+    scipy==1.6.0 \
     ipywidgets \
     keras \
     tensorflow-gpu==1.15.0 \
