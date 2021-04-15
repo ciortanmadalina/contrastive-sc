@@ -4,7 +4,8 @@ RUN apt update \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install jupyterlab \
+RUN pip install setuptools==45.0.0 \
+    jupyterlab \
     notebook \
     sklearn \
     lmdb \
