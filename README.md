@@ -1,6 +1,6 @@
 # Constrative-sc
 
-This repository contains the pytorch implementation of the paper "Contrastive sel-supervised clustering of scRNA-seq data", by Madalina Ciortan under the supervision of Matthieu Defrance.  
+This repository contains the pytorch implementation of the paper "Contrastive sel-supervised clustering of scRNA-seq data", by Madalina Ciortan under the supervision of Matthieu Defrance ([BMC Bioinformatics](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-021-04210-8) )  
 
 We adapted the self-supervised contrastive learning framework, initially proposed for image processing, to scRNA-seq data. An artificial neural network learns an embedding for each cell through a representation training phase. The embedding is then clustered with a general clustering algorithm (i.e. KMeans or Leiden community detection). Our method, contrastive-sc, has been compared with another ten state-of-the-art techniques. A broad experimental study has been conducted on both simulated and real-world datasets, assessing multiple external and internal clustering performance metrics (i.e. ARI, NMI, Silhouette, Calinski).
 
